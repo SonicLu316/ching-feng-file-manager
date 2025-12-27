@@ -1,12 +1,21 @@
 # PROCESS
 
-## 主要功能流程
+### 1. 檔案上傳 (File Upload)
+使用者點擊「新增檔案」進入 `/add` 頁面。
 
-1. **檔案上傳**
-   - 使用者在 `Upload` 頁面選擇檔案 → 前端呼叫 `src/api/upload.ts` 進行 `POST /upload`。
-   - 成功回傳檔案 ID，前端更新檔案列表並顯示上傳成功訊息。
-2. **檔案列表顯示**
-   - `FileList` 元件於 `src/components/FileList.tsx` 從 `src/api/files.ts` 取得檔案清單 (`GET /files`)。
+- **資料輸入**：主題、會議時間、地點 (API 下拉選單)、成員、檔案 (.mp3/.wav)。
+- **資料送出**：
+  - 使用 `FormData` 格式封裝所有欄位。
+  - 自動計算 `到期時間` (上傳時間 + 14 天)。
+  - 加入 `建立者` (當前登入 Email)。
+  - 呼叫 `/add_meetingrecords_with_file` API。
+- **結果處理**：
+  - **成功 (status: 1)**：顯示「上傳成功」，導回列表頁。
+  - **失敗 (status: 0)**：顯示後端回傳的錯誤訊息。
+  - **例外**：顯示網路錯誤提示。
+
+### 2. 檔案列表 (File List)
+`FileList` 元件於 `src/components/FileList.tsx` 從 `src/api/files.ts` 取得檔案清單 (`GET /files`)。
    - 支援分頁與搜尋，使用 `react-query` 快取結果。
 3. **檔案預覽與下載**
    - 點擊檔案項目觸發 `GET /files/:id`，取得檔案資訊與下載 URL。

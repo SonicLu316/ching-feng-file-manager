@@ -3,15 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogoIcon } from '../components/LogoIcon';
 
+import { useDialog } from '../context/DialogContext';
+
 export const LoginPage: React.FC = () => {
     const { login } = useAuth();
+    const { openDialog, closeDialog } = useDialog();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
-        login();
+
+        if (!email || !password) {
+            openDialog({
+                type: 'alert',
+                title: '登入失敗',
+                subtitle: '請輸入帳號與密碼',
+                showButton: true,
+                onConfirm: closeDialog
+            });
+            return;
+        }
+
+        // Development mode: Allow any non-empty credentials
+        login(email);
         navigate('/files');
     };
 

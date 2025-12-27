@@ -45,5 +45,11 @@ ching-feng-file-manager/
 > [!NOTE]
 > 只有以 `VITE_` 開頭的變數才會被暴露給前端代碼。
 
+## 認證機制 (Authentication Mechanism)
+系統使用 Context API `AuthContext` 進行狀態管理：
+- **登入狀態**：透過 `isLoggedIn` (boolean) 判斷。
+- **使用者資訊**：登入後將 Email 儲存於 `email` state，並同步至 `sessionStorage` 以防止頁面刷新丟失。
+- **生命週期**：`sessionStorage` 僅在當前會話有效，關閉分頁或執行登出後即清除，確保安全性。
+
 ## 後端 / API 互動方式
 目前前端專案透過 `src/api/` 目錄下的服務進行資料交換，底層使用 `fetch` 搭配全域 `config.ts` 中的 `API_BASE_URL`。

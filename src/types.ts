@@ -32,3 +32,13 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export interface UploadMeetingRecordParams {
+  file: File;
+  topic: string;
+  meetingTime: string;
+  locationId: string | number;
+  members: string;
+  originalFileName: string;
+  creator: string;
+}
+

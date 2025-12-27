@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { DialogConfig } from '../types';
+import { CustomDialog } from '../components/CustomDialog';
 
 interface DialogContextType {
     dialogConfig: DialogConfig;
@@ -30,6 +31,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     return (
         <DialogContext.Provider value={{ dialogConfig, openDialog, closeDialog }}>
             {children}
+            {dialogConfig.isOpen && <CustomDialog config={dialogConfig} onClose={closeDialog} />}
         </DialogContext.Provider>
     );
 }

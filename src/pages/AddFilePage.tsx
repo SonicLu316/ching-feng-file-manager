@@ -4,11 +4,29 @@ import { useNavigate } from 'react-router-dom';
 import { FormGroup } from '../components/FormGroup';
 import { useDialog } from '../context/DialogContext';
 import { fetchMeetingLocations } from '../api/locations';
+import { uploadMeetingRecord } from '../api/upload';
+import { useAuth } from '../context/AuthContext';
 
 export const AddFilePage: React.FC = () => {
     const navigate = useNavigate();
     const { openDialog, closeDialog } = useDialog();
-    const [formData, setFormData] = useState({ topic: '', time: '', location: '', members: '', fileName: '' });
+    const { email } = useAuth();
+    const [formData, setFormData] = useState({
+        topic: '',
+        time: (() => {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        })(),
+        location: '',
+        members: '',
+        fileName: ''
+    });
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [locationOptions, setLocationOptions] = useState<{ value: string | number; label: string }[]>([
         { value: '', label: '請選擇' }
@@ -26,37 +44,110 @@ export const AddFilePage: React.FC = () => {
                 setLocationOptions([{ value: '', label: '請選擇' }, ...options]);
             } catch (error) {
                 console.error('Error loading locations:', error);
-                // Fallback to default "請選擇"
                 setLocationOptions([{ value: '', label: '請選擇' }]);
             }
         };
         loadLocations();
     }, []);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            setFormData({ ...formData, fileName: file.name });
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.fileName) {
+
+        // Validation
+        if (!selectedFile) {
             openDialog({ type: 'alert', title: '上傳失敗！', subtitle: '請先選擇音訊檔案', showButton: true, onConfirm: closeDialog });
+            return;
+        }
+        if (!formData.topic) {
+            openDialog({ type: 'alert', title: '上傳失敗！', subtitle: '請輸入會議主題', showButton: true, onConfirm: closeDialog });
+            return;
+        }
+        if (!formData.time) {
+            openDialog({ type: 'alert', title: '上傳失敗！', subtitle: '請選擇會議時間', showButton: true, onConfirm: closeDialog });
             return;
         }
         if (!formData.location) {
             openDialog({ type: 'alert', title: '上傳失敗！', subtitle: '請選擇會議地點', showButton: true, onConfirm: closeDialog });
             return;
         }
+
         setIsUploading(true);
-        setTimeout(() => {
-            setIsUploading(false);
-            openDialog({
-                type: 'success',
-                title: '上傳成功！',
-                subtitle: '',
-                showButton: true,
-                onConfirm: () => {
-                    closeDialog();
-                    navigate('/files');
-                }
+        try {
+            // Adjust time format if needed (FormGroup date input usually gives YYYY-MM-DD)
+            // If FormGroup type="datetime-local" it gives YYYY-MM-DDTHH:mm
+            // Assuming the simple date input for now, but API might expect full datetime. 
+            // The user prompt example says "2025-12-26 11:34:20". 
+            // Since input type="date" only gives date, we might append default time or change input type.
+            // But strict to user request logic: "會議時間" parameter.
+            // Let's assume input value is sufficient or append " 09:00:00" if it's just date to match format "YYYY-MM-DD HH:mm:ss" approximately
+            // Or better, let's keep it as is if backend handles it, but plan said "YYYY-MM-DD HH:mm:ss".
+            // For now, I'll append current time or 00:00:00 if it's just date string.
+            // Actually, let's check input type. It's 'date'.
+            // I'll append a default time to satisfy common backend datetime parsing if needed, 
+            // or just send what user inputs if it's strictly just date. 
+            // The prompt example shows full datetime. Let's make it robust by appending current time safely or just "00:00:00".
+            // Wait, let's just send the value first. If backend needs specific format, I'll fix.
+            // But to be safe with "2025-12-26 11:34:20" format example, I should probably format it.
+
+            // Let's modify logic to ensure format.
+            let meetingTime = formData.time;
+            if (meetingTime.length === 10) { // YYYY-MM-DD
+                meetingTime += ' 09:00:00'; // Default start time
+            } else if (meetingTime.includes('T')) {
+                meetingTime = meetingTime.replace('T', ' ') + ':00';
+            }
+
+            const response = await uploadMeetingRecord({
+                file: selectedFile,
+                topic: formData.topic,
+                meetingTime: meetingTime,
+                locationId: formData.location,
+                members: formData.members || '無',
+                originalFileName: selectedFile.name,
+                creator: email || 'unknown'
             });
-        }, 1500);
+
+            if (response.status === 1) {
+                openDialog({
+                    type: 'success',
+                    title: '上傳成功！',
+                    subtitle: '檔案已成功上傳',
+                    showButton: true,
+                    onConfirm: () => {
+                        closeDialog();
+                        navigate('/files');
+                    }
+                });
+            } else {
+                openDialog({
+                    type: 'alert',
+                    title: '上傳失敗！',
+                    subtitle: response.message || '上傳失敗',
+                    showButton: true,
+                    onConfirm: closeDialog
+                });
+            }
+
+        } catch (error) {
+            console.error(error);
+            openDialog({
+                type: 'alert',
+                title: '上傳失敗！',
+                subtitle: '網路錯誤，請稍後再試',
+                showButton: true,
+                onConfirm: closeDialog
+            });
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     return (
@@ -88,10 +179,10 @@ export const AddFilePage: React.FC = () => {
                     />
 
                     <FormGroup
-                        type="date"
+                        type="datetime-local"
                         icon={<Clock size={20} />}
                         label="會議時間"
-                        placeholder="請選擇日期"
+                        placeholder="請選擇日期時間"
                         value={formData.time}
                         onChange={(val) => setFormData({ ...formData, time: val })}
                     />
@@ -125,7 +216,7 @@ export const AddFilePage: React.FC = () => {
                                 ref={fileInputRef}
                                 className="hidden"
                                 accept=".mp3,.wav,audio/*"
-                                onChange={(e) => setFormData({ ...formData, fileName: e.target.files?.[0]?.name || '' })}
+                                onChange={handleFileChange}
                             />
                             <input
                                 readOnly
