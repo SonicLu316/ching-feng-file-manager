@@ -30,6 +30,17 @@ npm run build
 npm run preview
 ```
 
+## 本機開發環境設定 (Local Environment)
+
+為了連接 API，您可以在根目錄建立 `.env.local` 檔案來覆蓋預設網址：
+
+1. 在專案根目錄建立 `.env.local`。
+2. 加入以下內容：
+   ```env
+   VITE_API_BASE_URL=http://localhost:8080/eip-api/api
+   ```
+3. 重啟開發伺服器 `npm run dev`。
+
 ## 常見問題
 - **npm install 卡住**：確認網路連線或使用 `npm ci` 重新安裝。
 - **開發伺服器無法啟動**：檢查是否有其他程式佔用 3000 埠，或在 `.env` 中調整 `VITE_PORT`。

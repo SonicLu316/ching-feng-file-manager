@@ -1,20 +1,46 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Loader2, PenTool, Clock, MapPin, Users, MoreHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { FormGroup } from '../components/FormGroup';
 import { useDialog } from '../context/DialogContext';
+import { fetchMeetingLocations } from '../api/locations';
 
 export const AddFilePage: React.FC = () => {
     const navigate = useNavigate();
     const { openDialog, closeDialog } = useDialog();
     const [formData, setFormData] = useState({ topic: '', time: '', location: '', members: '', fileName: '' });
     const [isUploading, setIsUploading] = useState(false);
+    const [locationOptions, setLocationOptions] = useState<{ value: string | number; label: string }[]>([
+        { value: '', label: '請選擇' }
+    ]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const loadLocations = async () => {
+            try {
+                const locations = await fetchMeetingLocations();
+                const options = locations.map(loc => ({
+                    value: loc.流水號,
+                    label: `${loc.廠區}-${loc.會議室}`
+                }));
+                setLocationOptions([{ value: '', label: '請選擇' }, ...options]);
+            } catch (error) {
+                console.error('Error loading locations:', error);
+                // Fallback to default "請選擇"
+                setLocationOptions([{ value: '', label: '請選擇' }]);
+            }
+        };
+        loadLocations();
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.fileName) {
             openDialog({ type: 'alert', title: '上傳失敗！', subtitle: '請先選擇音訊檔案', showButton: true, onConfirm: closeDialog });
+            return;
+        }
+        if (!formData.location) {
+            openDialog({ type: 'alert', title: '上傳失敗！', subtitle: '請選擇會議地點', showButton: true, onConfirm: closeDialog });
             return;
         }
         setIsUploading(true);
@@ -71,11 +97,13 @@ export const AddFilePage: React.FC = () => {
                     />
 
                     <FormGroup
+                        type="select"
                         icon={<MapPin size={20} />}
                         label="會議地點"
                         placeholder="請選擇地點"
                         value={formData.location}
                         onChange={(val) => setFormData({ ...formData, location: val })}
+                        options={locationOptions}
                     />
 
                     <FormGroup

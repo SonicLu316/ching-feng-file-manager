@@ -18,3 +18,17 @@ export interface DialogConfig {
   onConfirm?: (() => void) | null;
   showButton?: boolean;
 }
+
+export interface MeetingLocation {
+  流水號: number;
+  廠區: string;
+  會議室: string;
+  其他說明: string | null;
+}
+
+export interface ApiResponse<T> {
+  status: number;
+  message: string;
+  data: T;
+}
+
