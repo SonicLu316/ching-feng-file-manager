@@ -50,6 +50,14 @@ npm run preview
 - `public/`: 靜態資源
 - `index.html`: 指定的 HTML 模板
 
+## 文件
+
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [PROCESS.md](docs/PROCESS.md)
+- [GETTING_STARTED.md](docs/GETTING_STARTED.md)
+- [CONTRIBUTING.md](docs/CONTRIBUTING.md)
+
+
 ## 技術棧
 
 - React 19
