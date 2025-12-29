@@ -1,10 +1,10 @@
-
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { UserInfo } from '../types';
 
 interface AuthContextType {
     isLoggedIn: boolean;
-    email: string;
-    login: (email: string) => void;
+    user: UserInfo | null;
+    login: (userInfo: UserInfo) => void;
     logout: () => void;
 }
 
@@ -12,37 +12,48 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [email, setEmail] = useState('');
+    const [user, setUser] = useState<UserInfo | null>(null);
 
     useEffect(() => {
         const storedLogin = localStorage.getItem('isLoggedIn');
-        const storedEmail = sessionStorage.getItem('userEmail');
+        const storedUser = sessionStorage.getItem('userInfo');
+
         if (storedLogin === 'true') {
             setIsLoggedIn(true);
         }
-        if (storedEmail) {
-            setEmail(storedEmail);
+
+        if (storedUser) {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (e) {
+                console.error('Failed to parse user info from session storage', e);
+                localStorage.removeItem('isLoggedIn'); // Force logout if data is corrupted
+            }
         }
     }, []);
 
-    const login = (userEmail: string) => {
+    const login = (userInfo: UserInfo) => {
         setIsLoggedIn(true);
-        setEmail(userEmail);
+        setUser(userInfo);
+
         localStorage.setItem('isLoggedIn', 'true');
-        sessionStorage.setItem('userEmail', userEmail);
-        console.log(`[Auth] User logged in: ${userEmail} `);
+        sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
+
+        console.log(`[Auth] User logged in: ${userInfo.工號} (${userInfo.顯示名稱})`);
     };
 
     const logout = () => {
         setIsLoggedIn(false);
-        setEmail('');
+        setUser(null);
+
         localStorage.removeItem('isLoggedIn');
-        sessionStorage.removeItem('userEmail');
+        sessionStorage.removeItem('userInfo');
+
         console.log('[Auth] User logged out');
     };
 
     return (
-        <AuthContext.Provider value={{ isLoggedIn, email, login, logout }}>
+        <AuthContext.Provider value={{ isLoggedIn, user, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

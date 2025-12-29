@@ -7,7 +7,7 @@ import { useDialog } from '../context/DialogContext';
 import { CustomDialog } from '../components/CustomDialog';
 
 export const MainLayout: React.FC = () => {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const { dialogConfig, closeDialog } = useDialog();
     const navigate = useNavigate();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -35,12 +35,13 @@ export const MainLayout: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-6">
-                    <span className="text-base font-medium">嗨！慶豐富</span>
+                    <span className="text-base font-medium">嗨！{user?.顯示名稱 || '訪客'}</span>
                     <button
                         onClick={handleLogout}
-                        className="text-[#595959] hover:text-[#197675] transition-all transform hover:scale-110"
+                        className="text-[#595959] hover:text-[#197675] transition-all transform hover:scale-105 flex items-center gap-2 px-3 py-1 rounded-full hover:bg-white/30"
                     >
-                        <LogOut size={22} />
+                        <LogOut size={20} />
+                        <span className="text-sm font-medium">登出</span>
                     </button>
                 </div>
             </header>
@@ -50,6 +51,7 @@ export const MainLayout: React.FC = () => {
                     <nav className="space-y-4">
                         <NavLink
                             to="/files"
+                            onClick={() => setIsSidebarOpen(false)}
                             className={({ isActive }) => `flex items-center gap-4 px-4 py-3 rounded-lg cursor-pointer transition-all ${isActive ? 'text-[#197675] font-bold bg-[#197675]/5' : 'text-[#595959] hover:bg-black/5'}`}
                         >
                             <Folder size={20} />
@@ -57,6 +59,7 @@ export const MainLayout: React.FC = () => {
                         </NavLink>
                         <NavLink
                             to="/add"
+                            onClick={() => setIsSidebarOpen(false)}
                             className={({ isActive }) => `flex items-center gap-4 px-4 py-3 rounded-lg cursor-pointer transition-all ${isActive ? 'text-[#197675] font-bold bg-[#197675]/5' : 'text-[#595959] hover:bg-black/5'}`}
                         >
                             <FolderPlus size={20} />

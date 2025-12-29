@@ -81,3 +81,31 @@ export interface QueryMeetingRecordsResponse {
   總筆數: number;
   資料: MeetingRecord[];
 }
+
+// 登入請求參數
+export interface LoginRequest {
+  工號: string;
+  密碼: string;
+}
+
+// 使用者資訊
+export interface UserInfo {
+  工號: string;
+  顯示名稱: string;
+  電子郵件: string;
+  角色: string;
+}
+
+// 登入回應 data 欄位
+export interface LoginData {
+  是否成功: boolean;
+  訊息: string;
+  使用者資訊: UserInfo | null;
+}
+
+// 登入 API 完整回應
+export interface LoginResponse {
+  code: number;
+  message: string;
+  data: LoginData;
+}

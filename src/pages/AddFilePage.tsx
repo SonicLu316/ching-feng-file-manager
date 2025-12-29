@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 export const AddFilePage: React.FC = () => {
     const navigate = useNavigate();
     const { openDialog, closeDialog } = useDialog();
-    const { email } = useAuth();
+    const { user } = useAuth();
     const [formData, setFormData] = useState({
         topic: '',
         time: (() => {
@@ -112,7 +112,7 @@ export const AddFilePage: React.FC = () => {
                 locationId: formData.location,
                 members: formData.members || '無',
                 originalFileName: selectedFile.name,
-                creator: email || 'unknown'
+                creator: user?.工號 || 'unknown'
             });
 
             if (response.status === 1) {

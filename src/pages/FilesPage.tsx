@@ -9,8 +9,24 @@ export const FilesPage: React.FC = () => {
 
     // Search params state
     const [searchTerm, setSearchTerm] = useState('');
-    const [searchDateStart, setSearchDateStart] = useState('');
-    const [searchDateEnd, setSearchDateEnd] = useState('');
+
+    // Initialize dates directly in state to allow auto-search on mount
+    const [searchDateStart, setSearchDateStart] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    });
+
+    const [searchDateEnd, setSearchDateEnd] = useState(() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    });
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -23,26 +39,6 @@ export const FilesPage: React.FC = () => {
 
     // Selection state
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-
-    // Initialize default dates (7 days ago to now)
-    useEffect(() => {
-        const end = new Date();
-        const start = new Date();
-        start.setDate(start.getDate() - 7);
-
-        const formatDate = (date: Date) => {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`; // YYYY-MM-DD
-        };
-
-        // Use full datetime string for API if needed, but input type='date' uses YYYY-MM-DD
-        // API example showed full datetime "2025-11-10 00:00:00". 
-        // We will append time when sending to API.
-        setSearchDateStart(formatDate(start));
-        setSearchDateEnd(formatDate(end));
-    }, []);
 
     const fetchFiles = useCallback(async () => {
         setIsLoading(true);
@@ -104,9 +100,7 @@ export const FilesPage: React.FC = () => {
     // 4. PageSize change -> resets page to 1 -> calls fetch.
 
     useEffect(() => {
-        if (searchDateStart && searchDateEnd) {
-            fetchFiles();
-        }
+        fetchFiles();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentPage, pageSize]);
     // We intentionally exclude searchTerm/dates from dep array to avoid auto-fetch on typing. 
@@ -193,6 +187,10 @@ export const FilesPage: React.FC = () => {
                             onChange={(e) => setSearchDateStart(e.target.value)}
                         />
                         {!searchDateStart && <span className="absolute left-11 text-[#999999] pointer-events-none">開始時間</span>}
+                    </div>
+
+                    <div>
+                        ~
                     </div>
 
                     {/* Date Range - End */}
