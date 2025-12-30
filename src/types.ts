@@ -109,3 +109,34 @@ export interface LoginResponse {
   message: string;
   data: LoginData;
 }
+
+// 下載狀態枚舉
+export enum DownloadStatus {
+  Processing = 0,   // 進行中
+  Success = 1,      // 成功
+  Failed = 2,       // 失敗
+  FileNotFound = 3  // 找不到檔案
+}
+
+// 啟動下載回應 - data 直接是 uuid 字串
+export type StartDownloadResponse = string;
+
+// 下載狀態查詢回應
+export interface DownloadStatusData {
+  uuid: string;
+  status: DownloadStatus;
+  message: string;
+  fileName: string | null;
+  downloadUrl: string | null;
+  progress: number;
+}
+
+// 單一檔案下載參數
+export interface SingleDownloadParams {
+  serialNo: string;
+}
+
+// 批次下載參數
+export interface BatchDownloadParams {
+  serialNos: number[];
+}

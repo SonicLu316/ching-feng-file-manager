@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Calendar, Download, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDialog } from '../context/DialogContext';
-import { fetchMeetingRecordsPaginated } from '../api/files';
-import { MeetingRecord, MeetingRecordStatus } from '../types';
+import {
+    fetchMeetingRecordsPaginated,
+    startSingleDownload,
+    startBatchDownload,
+    checkDownloadStatus,
+    downloadFile
+} from '../api/files';
+import { MeetingRecord, MeetingRecordStatus, DownloadStatus } from '../types';
 
 export const FilesPage: React.FC = () => {
     const { openDialog, closeDialog } = useDialog();
@@ -130,13 +136,141 @@ export const FilesPage: React.FC = () => {
         else setSelectedIds(new Set(files.map(f => f.流水號)));
     };
 
-    const handleDownloadRequest = () => {
-        // Placeholder for download logic
+    // 輪詢下載狀態
+    const pollDownloadStatus = async (uuid: string): Promise<void> => {
+        const maxAttempts = 60; // 最多輪詢 60 次 (約 1 分鐘，每次間隔 1 秒)
+        let attempts = 0;
+
+        console.log(`Starting poll for UUID: ${uuid}`);
+
+        while (attempts < maxAttempts) {
+            try {
+                const response = await checkDownloadStatus(uuid);
+                console.log(`Poll attempt ${attempts + 1}:`, response);
+
+                if (response.status === 1 && response.data) {
+                    const { status, message, fileName } = response.data;
+                    console.log(`Current download status: ${status}, message: ${message}`);
+
+                    if (status === 1 && fileName) {
+                        // 成功，開始下載檔案
+                        console.log('Download success, starting file download...');
+                        await downloadFile(uuid, fileName);
+                        openDialog({
+                            type: 'success',
+                            title: '下載成功！',
+                            subtitle: `檔案 ${fileName} 已開始下載`,
+                            showButton: true,
+                            onConfirm: closeDialog
+                        });
+                        return;
+                    } else {
+                        // 其他所有情況（包括 status: 0, 2, 3 等）都視為處理中，繼續輪詢
+                        console.log(`Status ${status} - continuing to poll... (${message})`);
+                    }
+                } else {
+                    console.warn('API response status not 1 or no data:', response);
+                }
+            } catch (error) {
+                console.error('Status check error:', error);
+                openDialog({
+                    type: 'alert',
+                    title: '查詢失敗',
+                    subtitle: '無法查詢下載狀態',
+                    showButton: true,
+                    onConfirm: closeDialog
+                });
+                return;
+            }
+
+            // 等待 1 秒後再次查詢
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+        }
+
+        // 超時
+        console.error('Polling timed out');
+        openDialog({
+            type: 'alert',
+            title: '下載超時',
+            subtitle: '檔案生成時間過長，請稍後再試',
+            showButton: true,
+            onConfirm: closeDialog
+        });
+    };
+
+    // 單一檔案下載
+    const handleSingleDownload = async (serialNo: number) => {
+        try {
+            openDialog({ type: 'download', title: '準備下載...', subtitle: '正在生成檔案', showButton: false });
+
+            const response = await startSingleDownload({ serialNo: serialNo.toString() });
+
+            console.log('Start Single Download Response:', response);
+            if (response.status === 1 && response.data) {
+                // 如果 data 是字串 (uuid)，直接使用；如果是物件且有 uuid 屬性，則取用
+                const uuid = typeof response.data === 'string' ? response.data : (response.data as any).uuid;
+                console.log('Extracted UUID:', uuid);
+
+                if (uuid) {
+                    await pollDownloadStatus(uuid);
+                } else {
+                    console.error('UUID not found in response data');
+                    openDialog({ type: 'alert', title: '錯誤', subtitle: '無法取得下載 ID', showButton: true, onConfirm: closeDialog });
+                }
+            } else {
+                openDialog({
+                    type: 'alert',
+                    title: '啟動失敗',
+                    subtitle: response.message || '無法啟動下載',
+                    showButton: true,
+                    onConfirm: closeDialog
+                });
+            }
+        } catch (error) {
+            console.error('Download error:', error);
+            openDialog({
+                type: 'alert',
+                title: '下載錯誤',
+                subtitle: '無法連接伺服器',
+                showButton: true,
+                onConfirm: closeDialog
+            });
+        }
+    };
+
+    // 批次下載
+    const handleDownloadRequest = async () => {
         if (selectedIds.size === 0) return;
-        openDialog({ type: 'download', title: '下載中...', subtitle: '', showButton: false });
-        setTimeout(() => {
-            openDialog({ type: 'success', title: '下載成功！', subtitle: '檔案已開始下載', showButton: true, onConfirm: closeDialog });
-        }, 1500);
+
+        try {
+            openDialog({ type: 'download', title: '準備下載...', subtitle: '正在生成檔案', showButton: false });
+
+            const serialNos: number[] = Array.from(selectedIds);
+            const response = await startBatchDownload({ serialNos });
+
+            if (response.status === 1 && response.data) {
+                const uuid = response.data;
+                await pollDownloadStatus(uuid);
+            } else {
+                openDialog({
+                    type: 'alert',
+                    title: '啟動失敗',
+                    subtitle: response.message || '無法啟動下載',
+                    showButton: true,
+                    onConfirm: closeDialog
+                });
+            }
+        } catch (error) {
+            console.error('Batch download error:', error);
+            openDialog({
+                type: 'alert',
+                title: '下載錯誤',
+                subtitle: '無法連接伺服器',
+                showButton: true,
+                onConfirm: closeDialog
+            });
+        }
     };
 
     const getStatusConfig = (status: MeetingRecordStatus) => {
@@ -281,7 +415,7 @@ export const FilesPage: React.FC = () => {
                                     </div>
                                     {file.會議記錄狀態 === MeetingRecordStatus.Completed && (
                                         <button
-                                            onClick={() => {/* Single download logic if needed usually opens modal */ }}
+                                            onClick={() => handleSingleDownload(file.流水號)}
                                             className="p-2 rounded-full hover:bg-[#F1F3F2] text-[#595959] transition-all"
                                             title="下載"
                                         >
