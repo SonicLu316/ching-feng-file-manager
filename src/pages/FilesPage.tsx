@@ -153,7 +153,7 @@ export const FilesPage: React.FC = () => {
                     console.log(`Current download status: ${status}, message: ${message}`);
 
                     if (status === 1 && fileName) {
-                        // 成功，開始下載檔案
+                        // 1: SUCCESS (成功)
                         console.log('Download success, starting file download...');
                         await downloadFile(uuid, fileName);
                         openDialog({
@@ -164,9 +164,24 @@ export const FilesPage: React.FC = () => {
                             onConfirm: closeDialog
                         });
                         return;
+                    } else if (status === 0) {
+                        // 0: FAILED (失敗)
+                        console.error(`Download failed: ${message}`);
+                        openDialog({
+                            type: 'alert',
+                            title: '下載失敗',
+                            subtitle: message || '檔案生成失敗',
+                            showButton: true,
+                            onConfirm: closeDialog
+                        });
+                        return;
+                    } else if (status === 2 || status === 3) {
+                        // 2: PROCESSING (處理中), 3: PENDING (等待中)
+                        // 繼續輪詢
+                        console.log(`Status ${status} (${status === 2 ? 'Processing' : 'Pending'}) - continuing to poll... (${message})`);
                     } else {
-                        // 其他所有情況（包括 status: 0, 2, 3 等）都視為處理中，繼續輪詢
-                        console.log(`Status ${status} - continuing to poll... (${message})`);
+                        // 其他狀態
+                        console.warn(`Unknown status ${status} - continuing to poll... (${message})`);
                     }
                 } else {
                     console.warn('API response status not 1 or no data:', response);
